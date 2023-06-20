@@ -2,12 +2,16 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
+
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix
+import torch.utils.data as data
+
 
 # Set device to GPU if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
 # Define VAN architecture
 class VAN(nn.Module):
@@ -26,7 +30,7 @@ class VAN(nn.Module):
             nn.Linear(28 * 28, 128),
             nn.ReLU(),
             nn.Linear(128, 10),
-            #nn.Softmax(dim=1)
+            # nn.Softmax(dim=1)
         )
 
     def forward(self, x):
@@ -35,14 +39,48 @@ class VAN(nn.Module):
         output = self.classification(attended_image)
         return output
 
+
 # Load and preprocess the MNIST dataset
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
+transform1 = transforms.Compose([
+    transforms.RandomResizedCrop((28, 28), ratio=(0.75, 1.3333333333333333)),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
+transform2 = transforms.Compose([
+    transforms.ElasticTransform(alpha=38.0, sigma=6.0),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
+transform3 = transforms.Compose([
+    transforms.GaussianBlur(kernel_size=3),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
+transform4 = transforms.Compose([
+    transforms.RandomResizedCrop((28, 28), ratio=(0.75, 1.3333333333333333)),
+    transforms.ElasticTransform(alpha=38.0, sigma=6.0),
+    transforms.GaussianBlur(kernel_size=3),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
 
-train_dataset = torchvision.datasets.MNIST(root="./data", train=True, transform=transform, download=True)
+train_dataset = torchvision.datasets.MNIST(root="./data", train=True, transform=transform4, download=True)
+trainset1 = torchvision.datasets.MNIST(root="./data", train=True, transform=transform1, download=True)
+trainset2 = torchvision.datasets.MNIST(root="./data", train=True, transform=transform2, download=True)
+trainset3 = torchvision.datasets.MNIST(root="./data", train=True, transform=transform3, download=True)
+
+combined_trainset = data.ConcatDataset([train_dataset, trainset1, trainset2, trainset3])
+
 test_dataset = torchvision.datasets.MNIST(root="./data", train=False, transform=transform, download=True)
+testset1 = torchvision.datasets.MNIST(root="./data", train=False, transform=transform1, download=True)
+testset2 = torchvision.datasets.MNIST(root="./data", train=False, transform=transform2, download=True)
+testset3 = torchvision.datasets.MNIST(root="./data", train=False, transform=transform3, download=True)
+
+combined_testset = data.ConcatDataset([train_dataset, testset1, testset2, testset3])
 
 train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
