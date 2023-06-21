@@ -32,18 +32,22 @@ class GAT(torch.nn.Module):
 
     def __init__(self, dim_in, dim_h, dim_out, heads=8):
         super().__init__()
-        self.gat1 = GATv2Conv(dim_in, dim_h, heads=heads)
-        self.gat2 = GATv2Conv(dim_h * heads, dim_out, heads=1)
+        self.gat1 = GATv2Conv(dim_in, dim_h * 4, heads=heads)
+        self.gat2 = GATv2Conv(dim_h * 8 * 4, dim_h, heads=4)
+        self.gat3 = GATv2Conv(dim_h * 4, dim_out, heads=1)
         self.optimizer = torch.optim.Adam(self.parameters(),
-                                          lr=0.01,
+                                          lr=0.005,
                                           weight_decay=5e-4)
 
     def forward(self, x, edge_index):
         h = F.dropout(x, p=0.6, training=self.training)
-        h = self.gat1(x, edge_index)
-        h = F.elu(h)
+        h = self.gat1(h, edge_index)
+        h = F.relu(h)
         h = F.dropout(h, p=0.6, training=self.training)
         h = self.gat2(h, edge_index)
+        h = F.relu(h)
+        h = F.dropout(h, p=0.6, training=self.training)
+        h = self.gat3(h, edge_index)
         return h, F.log_softmax(h, dim=1)
 
 
@@ -56,7 +60,7 @@ def train(model, data):
     """Train a GNN model and return the trained model."""
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = model.optimizer
-    epochs = 200
+    epochs = 100
 
     model.train()
     for epoch in range(epochs + 1):
@@ -104,7 +108,7 @@ acc = test(gcn, data)
 print(f'GCN test accuracy: {acc*100:.2f}%\n')
 
 # Create GAT
-gat = GAT(dataset.num_features, 14, dataset.num_classes)
+gat = GAT(dataset.num_features, 16, dataset.num_classes)
 print(gat)
 
 # Train
@@ -115,7 +119,7 @@ acc = test(gat, data)
 print(f'GAT test accuracy: {acc*100:.2f}%\n')
 
 
-untrained_gat = GAT(dataset.num_features, 8, dataset.num_classes)
+untrained_gat = GAT(dataset.num_features, 16, dataset.num_classes)
 
 # Get embeddings
 h, _ = untrained_gat(data.x, data.edge_index)
