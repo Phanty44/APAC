@@ -31,7 +31,7 @@ class VAN(nn.Module):
             nn.Linear(28 * 28, 128),
             nn.ReLU(),
             nn.Linear(128, 10),
-            # nn.Softmax(dim=1)
+            #nn.Softmax(dim=1)
         )
 
     def forward(self, x):
@@ -47,17 +47,17 @@ transform = transforms.Compose([
     transforms.Normalize((0.5,), (0.5,))
 ])
 transform1 = transforms.Compose([
-    transforms.RandomResizedCrop((28, 28)),
+    transforms.RandomResizedCrop((28, 28)).to(device),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
 transform2 = transforms.Compose([
-    transforms.ElasticTransform(alpha=38.0, sigma=6.0),
+    transforms.ElasticTransform(alpha=38.0, sigma=6.0).to(device),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
 transform3 = transforms.Compose([
-    transforms.GaussianBlur(kernel_size=3),
+    transforms.GaussianBlur(kernel_size=3).to(device),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
@@ -81,14 +81,14 @@ test_loader = DataLoader(combined_testset, batch_size=128, shuffle=False)
 
 # Create VAN model and move it to GPU if available
 model = VAN().to(device)
-
+print(model)
 # Define loss function and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 # Training loop
-model.train()
-for epoch in range(5):
+model.train().to(device)
+for epoch in range(3):
     running_loss = 0.0
     for i, (inputs, labels) in enumerate(train_loader):
         inputs = inputs.to(device)
