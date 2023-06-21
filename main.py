@@ -1,17 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.utils.data as data
 import torchvision
 
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from sklearn.metrics import confusion_matrix
-import torch.utils.data as data
 
+import visualization
 
 # Set device to GPU if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
+
 
 # Define VAN architecture
 class VAN(nn.Module):
@@ -46,7 +47,7 @@ transform = transforms.Compose([
     transforms.Normalize((0.5,), (0.5,))
 ])
 transform1 = transforms.Compose([
-    transforms.RandomResizedCrop((28, 28), ratio=(0.75, 1.3333333333333333)),
+    transforms.RandomResizedCrop((28, 28)),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
@@ -60,15 +61,8 @@ transform3 = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
-transform4 = transforms.Compose([
-    transforms.RandomResizedCrop((28, 28), ratio=(0.75, 1.3333333333333333)),
-    transforms.ElasticTransform(alpha=38.0, sigma=6.0),
-    transforms.GaussianBlur(kernel_size=3),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
 
-train_dataset = torchvision.datasets.MNIST(root="./data", train=True, transform=transform4, download=True)
+train_dataset = torchvision.datasets.MNIST(root="./data", train=True, transform=transform, download=True)
 trainset1 = torchvision.datasets.MNIST(root="./data", train=True, transform=transform1, download=True)
 trainset2 = torchvision.datasets.MNIST(root="./data", train=True, transform=transform2, download=True)
 trainset3 = torchvision.datasets.MNIST(root="./data", train=True, transform=transform3, download=True)
@@ -82,8 +76,8 @@ testset3 = torchvision.datasets.MNIST(root="./data", train=False, transform=tran
 
 combined_testset = data.ConcatDataset([train_dataset, testset1, testset2, testset3])
 
-train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
+train_loader = DataLoader(combined_trainset, batch_size=128, shuffle=True)
+test_loader = DataLoader(combined_testset, batch_size=128, shuffle=False)
 
 # Create VAN model and move it to GPU if available
 model = VAN().to(device)
@@ -132,7 +126,5 @@ with torch.no_grad():
         predicted_labels.extend(predicted.cpu().numpy())  # Append predicted labels to the list
         true_labels.extend(labels.cpu().numpy())  # Append true labels to the list
 print(f"Test Accuracy: {(100 * correct / total):.2f}%")
-
-cm = confusion_matrix(true_labels, predicted_labels)
 print("Confusion Matrix:")
-print(cm)
+visualization.visualize_confusion(true_labels, predicted_labels)
