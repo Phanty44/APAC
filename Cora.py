@@ -118,7 +118,7 @@ augmented_graph.remove_edges_from(edges_to_remove)
 
 augmented_data = from_networkx(augmented_graph)
 
-dataset.data = augmented_data
+data.edge_index = augmented_data.edge_index
 
 # Create GCN
 gcn = GCN(dataset.num_features, 14, dataset.num_classes)
