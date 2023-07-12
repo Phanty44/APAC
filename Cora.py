@@ -5,7 +5,9 @@ from sklearn.manifold import TSNE
 from torch.nn import Linear, Dropout
 from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import GCNConv, GATv2Conv
-
+import visualization
+from torch_geometric.utils.convert import from_networkx, to_networkx
+import random
 
 class GCN(torch.nn.Module):
     """Graph Convolutional Network"""
@@ -86,11 +88,33 @@ def test(model, data):
     model.eval()
     _, out = model(data.x, data.edge_index)
     acc = accuracy(out.argmax(dim=1)[data.test_mask], data.y[data.test_mask])
+    visualization.visualize_confusion_cora(data.y[data.test_mask], out.argmax(dim=1)[data.test_mask])
+    visualization.visualize_confusion_cora(data.y[data.test_mask], out.argmax(dim=1)[data.test_mask])
     return acc
+
 
 # Import dataset from PyTorch Geometric
 dataset = Planetoid(root=".", name="Cora")
 data = dataset[0]
+
+original_graph = to_networkx(dataset[0]).to_undirected()
+# Create a copy of the original citation graph
+augmented_graph = original_graph.copy()
+
+# Edge addition
+num_edges_to_add = 500
+for _ in range(num_edges_to_add):
+    node_a, node_b = random.sample(list(original_graph.nodes()), 2)
+    augmented_graph.add_edge(node_a, node_b)
+
+# Edge removal
+num_edges_to_remove = 100
+edges_to_remove = random.sample(list(augmented_graph.edges()), num_edges_to_remove)
+augmented_graph.remove_edges_from(edges_to_remove)
+
+augmented_data = from_networkx(augmented_graph)
+
+dataset.data = augmented_data
 
 # Create GCN
 gcn = GCN(dataset.num_features, 14, dataset.num_classes)
@@ -101,7 +125,7 @@ train(gcn, data)
 
 # Test
 acc = test(gcn, data)
-print(f'GCN test accuracy: {acc*100:.2f}%\n')
+print(f'GCN test accuracy: {acc * 100:.2f}%\n')
 
 # Create GAT
 gat = GAT(dataset.num_features, 14, dataset.num_classes)
@@ -112,8 +136,7 @@ train(gat, data)
 
 # Test
 acc = test(gat, data)
-print(f'GAT test accuracy: {acc*100:.2f}%\n')
-
+print(f'GAT test accuracy: {acc * 100:.2f}%\n')
 
 untrained_gat = GAT(dataset.num_features, 8, dataset.num_classes)
 
@@ -122,7 +145,7 @@ h, _ = untrained_gat(data.x, data.edge_index)
 
 # Train TSNE
 tsne = TSNE(n_components=2, learning_rate='auto',
-         init='pca').fit_transform(h.detach())
+            init='pca').fit_transform(h.detach())
 
 # Plot TSNE
 plt.figure(figsize=(10, 10))
@@ -134,7 +157,7 @@ h, _ = gat(data.x, data.edge_index)
 
 # Train TSNE
 tsne = TSNE(n_components=2, learning_rate='auto',
-         init='pca').fit_transform(h.detach())
+            init='pca').fit_transform(h.detach())
 
 # Plot TSNE
 plt.figure(figsize=(10, 10))
